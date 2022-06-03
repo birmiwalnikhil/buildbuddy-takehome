@@ -1,6 +1,6 @@
 # buildbuddy-takehome
 
-A key/value store implemented on a Go server which accepts arbitrary length inputs. There are two APIs exposed to clients:
+A key/value store implemented on a Go server which accepts arbitrary length inputs. The server runs on `localhost:8080`. There are two APIs exposed to clients:
 
 1) `/set`. A HTTP Post method which stores a key/value pair from the POST Body.
 2) `/get/<key>`. Returns the value of a previously `/set/` key/value pair. 
