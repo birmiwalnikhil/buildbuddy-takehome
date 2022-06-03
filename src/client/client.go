@@ -61,3 +61,11 @@ func (c *Client) Set(key string, value []byte) error {
   // TODO: Case on the HttpErrorCode
   return nil
 }
+
+func MakeClient() *Client {
+  c := &Client {}
+
+  c.httpClient = &http.Client {}
+
+  return c
+}
