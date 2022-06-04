@@ -83,14 +83,10 @@ func (c *Client) Set(key string, value []byte) error {
   }
 
   if resp.StatusCode != http.StatusOK {
-    defer resp.Body.Close()
-    buffer, _ := ioutil.ReadAll(resp.Body)
     return errors.New(
-      fmt.Sprintf("HttpError when setting", key, "->", value, "err=",
-string(buffer)))
+      fmt.Sprintf("HttpError %v when setting %v -> %v", resp.StatusCode, key, value))
   }
 
-  // TODO: Case on the HttpErrorCode
   return nil
 }
 
