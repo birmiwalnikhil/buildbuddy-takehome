@@ -2,3 +2,8 @@ Unit Tests (client / server / main).
 Synchronizing Reads and Writes.
 Caching Support.
 Support remote file storage (e.g. via a URL and a size).
+Telemetry:
+  Error logging (client, server, etc.)
+  Cache hit rates.
+  Latency metrics.
+  ... 

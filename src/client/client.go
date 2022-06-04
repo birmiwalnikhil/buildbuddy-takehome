@@ -7,7 +7,7 @@ import (
 )
 
 var (
-  emptyBuffer []byte
+  EMPTY_BUFFER []byte
 )
 
 // A collection of configuration parameters for 
@@ -22,10 +22,10 @@ type Client struct {
  * value from a previous /set call, or an error 
  * on failure.
  */
-func (c *Client) Get(key string) ([]byte, error) {
+func (c *Client) Get(key string) []byte {
   req, err := http.NewRequest("GET", "http://localhost:8080/get", nil)
   if err != nil {
-    return emptyBuffer, err
+    return EMPTY_BUFFER
   }
 
   // Add the key as a query parameter to the request.
@@ -36,13 +36,23 @@ func (c *Client) Get(key string) ([]byte, error) {
   // Execute the request.
   resp, err := c.httpClient.Do(req) 
   if err != nil {
-    return emptyBuffer, err
+    return EMPTY_BUFFER
+  }
+  
+  if resp.StatusCode != http.StatusOK {
+    // The server was not able to service this request.
+    return EMPTY_BUFFER
   }
 
-  // TODO: Case on the HttpErrorCode.
-
   defer resp.Body.Close()
-  return ioutil.ReadAll(resp.Body)
+  buffer, err := ioutil.ReadAll(resp.Body)
+
+  if err != nil {
+    // Error reading the response body.
+    return EMPTY_BUFFER
+  }
+  
+  return buffer
 }
 
 /** 

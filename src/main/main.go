@@ -7,6 +7,7 @@ import (
   "os"
   "buildbuddy.takehome.com/src/server"
   "buildbuddy.takehome.com/src/client"
+  "buildbuddy.takehome.com/src/store"
 )
 
 
@@ -14,7 +15,7 @@ import (
 // HttpClients may be instantiated to interact with the Server.
 func main() {
   // Configure the server via command line arguments.
-  s := &server.Server {}
+  s := server.MakeServer(store.MakeFileStore("/tmp/buildbuddy"))
   c := client.MakeClient()
   reader := bufio.NewReader(os.Stdin)
   go s.Start() // This is a blocking call.
@@ -33,13 +34,9 @@ func main() {
     operation := tokens[0]
     if operation == "GET" && len(tokens) == 2 {
       key := tokens[1]
-      resp, err := c.Get(key)
-      if err != nil {
-        fmt.Println("GET", key, " error:", err)
-      } else {
-        fmt.Println("GET", key, "->", string(resp)) 
-      }
-    } else if operation == "SET" && len(tokens) == 3 {
+      resp := c.Get(key)
+      fmt.Println("GET", key, "->", string(resp)) 
+   } else if operation == "SET" && len(tokens) == 3 {
       key := tokens[1]
       value := tokens[2]
       if err := c.Set(key, []byte(value)); err != nil {
