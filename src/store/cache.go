@@ -40,22 +40,7 @@ func (c *Cache) Set(key Key, value Value) error {
     return err
   }  
 
-  entry := &cacheEntry{}
-  entry.value = value
-  entry.sizeBytes = value.SizeOfBytes()
-  entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
-
-  // Continually evict LRU elements until we have sufficient space.
-  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
-    err := c.evictLru()
-    if err != nil { 
-      return err
-    }
-  }
-
-  c.sizeBytes += entry.sizeBytes
-  c.cache[key] = entry 
-  return nil
+ return c.addEntry(key, value)
 }
 
 /**
@@ -73,7 +58,32 @@ func (c *Cache) Get(key Key) (Value, error) {
     return "", err 
   }
 
+  // Attempt to store the value into the cache.
+  if err2 := c.addEntry(key, value); err2 != nil {
+    return "", err2
+  }
+
   return value, nil
+}
+
+// Add a key/value pair to the cache.
+func (c *Cache) addEntry(key Key, value Value) error {
+  entry := &cacheEntry{}
+  entry.value = value
+  entry.sizeBytes = value.SizeOfBytes()
+  entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
+  
+  // Continually evict LRU elements until we have sufficient space.
+  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
+    err := c.evictLru()
+    if err != nil { 
+      return err
+    }
+  }
+
+  c.sizeBytes += entry.sizeBytes
+  c.cache[key] = entry 
+  return nil 
 }
 
 // Evict the least recently used key from the cache, returning 
