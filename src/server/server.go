@@ -1,7 +1,9 @@
 package server 
 
 import(
+  "encoding/json"
   "fmt"
+  "io/ioutil"
   "log"
   "net/http"
   "buildbuddy.takehome.com/src/store"
@@ -43,9 +45,49 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   fmt.Fprintln(w, resp)
 }
 
-// Handler for a /set call.
+// Handler for a /set call. The HTTP Body is a JSON containing a 
+// Key/Value Pair (e.g. { "key" : "a key", "value": "an arbitrary value" })
 func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
-  fmt.Fprintln(w, "Server handling SET")
+  // Unmarshal the POST Body into the key/value pair.
+  defer r.Body.Close()
+  body, err := ioutil.ReadAll(r.Body)
+  if err != nil {
+    // Return a StatusInternalServerError; error reading the POST body.
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+
+  var kv map[string][]byte
+  if err := json.Unmarshal(body, &kv); err != nil {
+    // Return a StatusInternalServerError; error unmarshaling the POST body.
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+
+  key, ok1 := kv["key"]
+  if !ok1 {
+    // Return a StatusBadRequest; POST body missing the key.
+    w.WriteHeader(http.StatusBadRequest)
+    return 
+  }
+
+  value, ok2 := kv["value"]
+  if !ok2 {
+    // Return a StatusBadRequest; POST body missing the value.
+    w.WriteHeader(http.StatusBadRequest)
+    return
+  }
+  
+  fmt.Println("SET", string(key), "->", string(value))
+
+  storeErr := s.store.Set(store.Key(key), store.Value(value))
+  if storeErr != nil {
+    // Return a StatusInternalServerError; error when storing 
+    // the key/value pair.
+    w.WriteHeader(http.StatusInternalServerError)
+    fmt.Fprintln(w, storeErr)
+    return
+  }
 }
 
 // Start the server. Initializes any in-memory state, then begins

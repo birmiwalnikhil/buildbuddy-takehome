@@ -25,7 +25,7 @@ type FileStore struct {
 func (f *FileStore) Set(key Key, value Value) error {
     filePath := f.getFilePath(key)
     file, err := 
-      os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+      os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
     if err != nil {
       // IO Error when opening the file; return the error.
       return err
@@ -57,9 +57,13 @@ func (f *FileStore) getFilePath(key Key) string {
   return fmt.Sprintf(f.directory + "/%s", hex.EncodeToString(hash))
 }
 
-func MakeFileStore(directory string) *FileStore {
+func MakeFileStore(directory string) (*FileStore, error) {
   fs := &FileStore{}
   fs.directory = directory
+  // Make the directory if it does not already exist.
+  if err := os.Mkdir(directory, 0644); err != nil && !os.IsExist(err) {
+    return nil, err
+  } 
   fs.hash = md5.New()
-  return fs
+  return fs, nil
 } 

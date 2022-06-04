@@ -2,6 +2,9 @@ package client
 
 import (
   "bytes"
+  "encoding/json"
+  "errors"
+  "fmt"
   "io/ioutil"
   "net/http"
 )
@@ -61,11 +64,30 @@ func (c *Client) Get(key string) []byte {
  * if any.
  */
 func (c *Client) Set(key string, value []byte) error {
-  _, err := 
-    http.Post(
-      "http://localhost:8080/set", "application/json", bytes.NewBuffer(value)) 
+  // Marshal the key/value pair into a JSON.
+  kv := map[string][]byte {
+    "key": []byte(key),
+    "value": value,
+  }
+  
+  jsonKv, err := json.Marshal(kv)
   if err != nil {
     return err
+  }
+   
+  resp, postErr := 
+    http.Post(
+      "http://localhost:8080/set", "application/json", bytes.NewBuffer(jsonKv)) 
+  if postErr != nil {
+    return postErr
+  }
+
+  if resp.StatusCode != http.StatusOK {
+    defer resp.Body.Close()
+    buffer, _ := ioutil.ReadAll(resp.Body)
+    return errors.New(
+      fmt.Sprintf("HttpError when setting", key, "->", value, "err=",
+string(buffer)))
   }
 
   // TODO: Case on the HttpErrorCode

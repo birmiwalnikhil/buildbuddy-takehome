@@ -14,8 +14,13 @@ import (
 // Entry point for the server runner.
 // HttpClients may be instantiated to interact with the Server.
 func main() {
-  // Configure the server via command line arguments.
-  s := server.MakeServer(store.MakeFileStore("/tmp/buildbuddy"))
+  // Configure the server via command line arguments. 
+  fs, err := store.MakeFileStore("/tmp/buildbuddy")
+  if err != nil {
+    fmt.Println("Error making filestore; aborting.")
+    return 
+  }
+  s := server.MakeServer(fs)
   c := client.MakeClient()
   reader := bufio.NewReader(os.Stdin)
   go s.Start() // This is a blocking call.
