@@ -11,4 +11,3 @@ The key/value store is recovery resistant: server resets will continue to operat
 
 The following optimizations can be enabled via command line flags:
 - `--enable_caching`: Enables an in-memory cache
-- `--enable_remote_file_store`: Enables the files to be stored on remote servers.
