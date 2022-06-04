@@ -120,11 +120,11 @@ func (c *Cache) getAndIncreaseTimestamp() int {
 }
 
 // Construct a new Cache instance.
-func MakeCache(capacity int, upstream KeyValueStore) *Cache {
+func MakeCache(capacityBytes int, upstream KeyValueStore) *Cache {
   c := &Cache{}
 
   c.upstream = upstream
-  c.capacityBytes = capacity
+  c.capacityBytes = capacityBytes
   c.sizeBytes = 0
   c.timestamp = 0
   c.cache = make(map[Key]*cacheEntry) 

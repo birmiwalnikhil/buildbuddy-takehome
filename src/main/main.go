@@ -10,16 +10,28 @@ import (
   "buildbuddy.takehome.com/src/store"
 )
 
+const (
+  flagEnableCaching = "--enable_caching"
+)
 
 // Entry point for the server runner.
 // HttpClients may be instantiated to interact with the Server.
 func main() {
+  var fs store.KeyValueStore
+  var err error
   // Configure the server via command line arguments. 
-  fs, err := store.MakeFileStore("/tmp/buildbuddy")
+  fs, err = store.MakeFileStore("/tmp/buildbuddy")
   if err != nil {
     fmt.Println("Error making filestore; aborting.")
     return 
   }
+
+  // Optionally configure a cache.
+  if (flagEnabled(flagEnableCaching, os.Args)) {
+    cache := store.MakeCache(/* capacityBytes= */ 5000, fs)
+    fs = cache
+  }
+   
   s := server.MakeServer(fs)
   c := client.MakeClient()
   reader := bufio.NewReader(os.Stdin)
@@ -54,4 +66,13 @@ func main() {
 
     } 
   }
+}
+
+func flagEnabled(flag string, args []string) bool {
+  for _, value := range args {
+    if value == flag  {
+      return true
+    }
+  }
+  return false
 }
