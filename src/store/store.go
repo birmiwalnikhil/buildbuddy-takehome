@@ -3,6 +3,12 @@ package store
 type Key string
 type Value string
 
+// Utilty methods around the Value type.
+func (v Value) SizeOfBytes() int { 
+  return len(v)
+}
+
+
 // An interface for a KeyValue store.
 type KeyValueStore interface {
   /**

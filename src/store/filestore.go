@@ -14,9 +14,12 @@ import (
  *
  * <p> We enforce a deterministic strategy for identifying a 
  * filename given a Key. Currently, we filename for key == hash(key).
+ *
+ * <p> This class is not thread-safe; callers are expected to serialize
+ * reads and writes appropriately.
  */
 type FileStore struct {
-  // The absolute path where we should allocat files.
+  // The absolute path where we should allocate files.
   directory string 
   // The hashing strategy for this file store.
   hash hash.Hash
