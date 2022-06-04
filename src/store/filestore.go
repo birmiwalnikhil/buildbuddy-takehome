@@ -5,7 +5,7 @@ import (
   "hash"
   "encoding/hex"
   "fmt"
-
+  "os"
 )
 
 /**
@@ -23,13 +23,33 @@ type FileStore struct {
 }
 
 func (f *FileStore) Set(key Key, value Value) error {
-    fmt.Println("SET", string(key), " will be stored in", f.getFilePath(key))
+    filePath := f.getFilePath(key)
+    file, err := 
+      os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+    if err != nil {
+      // IO Error when opening the file; return the error.
+      return err
+    }
+    
+    // Write the value into the opened file.
+    defer file.Close()
+    _, err2 := file.Write([]byte(value))
+    if err2 != nil {
+      return err2
+    }
+
     return nil
 }
 
 func (f *FileStore) Get(key Key) (Value, error) {
-  fmt.Println("GET", key, " will be looked up in", f.getFilePath(key))
-  return "", nil
+  filePath := f.getFilePath(key)
+  value, err := os.ReadFile(filePath)
+  if err != nil {
+    // Error when reading the file (e.g. corrupted file, file missing).
+    return "", err
+  }
+  
+  return Value(value), nil
 }
 
 func (f *FileStore) getFilePath(key Key) string {
