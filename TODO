@@ -1,6 +1,5 @@
 Unit Tests (client / server / main).
 Synchronizing Reads and Writes.
-Caching Support.
 Support remote file storage (e.g. via a URL and a size).
 Directory sharding.
 Telemetry:
