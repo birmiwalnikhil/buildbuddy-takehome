@@ -39,14 +39,21 @@ func (c *Cache) Set(key Key, value Value) error {
     return err
   }  
 
-  // If we need to evict, evict the least recently used key.
-
-  // Increment the size of the cache.
   entry := &cacheEntry{}
   entry.value = value
   entry.sizeBytes = value.SizeOfBytes()
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
-  c.cache[key] = entry
+
+  // Continually evict LRU elements until we have sufficient space.
+  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
+    err := c.evictLru()
+    if err != nil { 
+      return err
+    }
+  }
+
+  c.sizeBytes += entry.sizeBytes
+  c.cache[key] = entry 
   return nil
 }
 
@@ -68,9 +75,31 @@ func (c *Cache) Get(key Key) (Value, error) {
   return value, nil
 }
 
-// Evict the key from the cache.
-func (c *Cache) evict(key Key) error {
-  // Identify the size of the value.
+// Evict the least recently used key from the cache, returning 
+// an error in case of failure.
+// TODO: Improve to a non O(|cache|) operation, e.g. via min heaps.
+func (c *Cache) evictLru() error {
+  if len(c.cache) == 0 {
+    return errors.New("Cannot evict an empty cache.")
+  }
+
+  // Arbitrarily assign the lruKey, lruValue to be any entry in the cache.
+  var lruKey Key
+  var lruEntry *cacheEntry
+
+  for lruKey, lruEntry = range c.cache {
+    break
+  }
+
+  for key, entry := range c.cache {
+    if entry.lastAccessedTimestamp < lruEntry.lastAccessedTimestamp {
+      lruKey = key
+      lruEntry = entry
+    } 
+  }
+
+  c.sizeBytes = c.sizeBytes - lruEntry.sizeBytes
+  delete(c.cache, lruKey)
   return nil
 }
 
