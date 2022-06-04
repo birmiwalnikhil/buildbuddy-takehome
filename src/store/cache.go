@@ -35,6 +35,7 @@ type Cache struct {
  */
 func (c *Cache) Set(key Key, value Value) error {
   // Maintain the upstream and the cache in sync.
+  // On failure, do not set the key in the in-memory store either.
   if err := c.upstream.Set(key, value); err != nil {
     return err
   }  

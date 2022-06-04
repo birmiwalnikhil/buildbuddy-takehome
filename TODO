@@ -1,9 +1,16 @@
 Unit Tests (client / server / main).
 Synchronizing Reads and Writes.
 Support remote file storage (e.g. via a URL and a size).
+Improve cache eviction performance.
 Directory sharding.
 Telemetry:
+  Add a instance to each Store
+    A URL to hit every time something happens
+    Could use gRPC or something to speed up performance.
   Error logging (client, server, etc.)
   Cache hit rates.
+  File store hit rates.
+  Cache error rates.
+  File error rates.
   Latency metrics.
   ... 

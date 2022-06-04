@@ -28,7 +28,7 @@ func main() {
 
   // Optionally configure a cache.
   if (flagEnabled(flagEnableCaching, os.Args)) {
-    cache := store.MakeCache(/* capacityBytes= */ 5000, fs)
+    cache := store.MakeCache(/* capacityBytes= */ 1, fs)
     fs = cache
   }
    
