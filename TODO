@@ -1,5 +1,4 @@
 Unit Tests (client / server / main).
-Synchronizing Reads and Writes.
 Support remote file storage (e.g. via a URL and a size).
 Improve cache eviction performance.
 Directory sharding.

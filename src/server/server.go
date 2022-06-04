@@ -6,24 +6,25 @@ import(
   "io/ioutil"
   "log"
   "net/http"
+  "sync"
   "buildbuddy.takehome.com/src/store"
 )
 
-// A collection of configuration parameters
-// for the server.
+// An HTTP Server that supports GET and SET operations. There may be multiple
+// GET operations running at the same time, but only one SET may be executed.
 type Server struct {
+  // A R/W lock to allow concurrent reads and blocking writes.
+  rwlock sync.RWMutex
   // The key/value store.
   store store.KeyValueStore 
-}
-
-// Restore all in-memory state of the server.
-func (s *Server) restoreBackup() {
-  // Do nothing; we currently have no in-memory state.
 }
 
 // Handler for a /get call. Reads a key/value pair from the underlying
 // store, and returns the value.
 func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
+  defer s.rwlock.RUnlock()
+  s.rwlock.RLock()
+
   // Extract the query parameter `key`.
   query := r.URL.Query()
   keyQuery, ok := query["key"]
@@ -48,6 +49,9 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 // Handler for a /set call. The HTTP Body is a JSON containing a 
 // Key/Value Pair (e.g. { "key" : "a key", "value": "an arbitrary value" })
 func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
+  defer s.rwlock.Unlock()
+  s.rwlock.Lock()
+
   // Unmarshal the POST Body into the key/value pair.
   defer r.Body.Close()
   body, err := ioutil.ReadAll(r.Body)
@@ -93,8 +97,6 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
 // Start the server. Initializes any in-memory state, then begins
 // accepting API calls.
 func (s *Server) Start() {
-  s.restoreBackup()
-
   http.HandleFunc("/get", s.handleGet)
   http.HandleFunc("/set", s.handleSet)
 
