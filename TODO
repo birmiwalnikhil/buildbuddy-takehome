@@ -1,19 +1,21 @@
-Unit Tests (client / server / main).
+Unit Tests
+  client
+  server
+  filestore
+  cache
+  main
+Integration Tests
+  Hammering the server with multiple clients executing GET and SET
+  Arbitrary length get/set
+  Enable server restarts
+Improve Cache Eviction Performance
+Keep Values in Memory and periodically flush.
+Directory Sharding
+Telemetry Support
+  Spin a server which store* can communicate with
+  Error Logging / Cache Hit Rates / File Store Hits
 Support remote file storage (e.g. via a URL and a size).
-Improve cache eviction performance.
-Directory sharding.
 Add a diagram explaining the architecture to help guide conversations.
   - Also include the JSONs that each server is expecting,
       e.g. client <--> API.
       e.g. store <--> StoreTelemetry.
-Telemetry:
-  Add a instance to each Store
-    A URL to hit every time something happens
-    Could use gRPC or something to speed up performance.
-  Error logging (client, server, etc.)
-  Cache hit rates.
-  File store hit rates.
-  Cache error rates.
-  File error rates.
-  Latency metrics.
-  ... 
