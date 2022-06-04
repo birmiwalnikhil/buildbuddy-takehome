@@ -3,6 +3,10 @@ Synchronizing Reads and Writes.
 Support remote file storage (e.g. via a URL and a size).
 Improve cache eviction performance.
 Directory sharding.
+Add a diagram explaining the architecture to help guide conversations.
+  - Also include the JSONs that each server is expecting,
+      e.g. client <--> API.
+      e.g. store <--> StoreTelemetry.
 Telemetry:
   Add a instance to each Store
     A URL to hit every time something happens
