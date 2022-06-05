@@ -139,7 +139,7 @@ func (c *Cache) evictLru() error {
 func (c *Cache) onKeyTouched(key Key) error {
   entry, ok := c.cache[key]
   if !ok {
-    return errors.New(fmt.Sprintf("Key missing in cache", key))
+    return errors.New(fmt.Sprintf("Key missing in cache %v", key))
   }
 
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
