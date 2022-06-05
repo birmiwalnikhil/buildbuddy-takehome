@@ -2,12 +2,12 @@ Unit Tests
   client
   server
   filestore
-  cache
   main
 Integration Tests
   Hammering the server with multiple clients executing GET and SET
   Arbitrary length get/set
   Enable server restarts
+Do I need a Shutdown method?
 Improve Cache Eviction Performance
 Keep Values in Memory and periodically flush.
 Directory Sharding
