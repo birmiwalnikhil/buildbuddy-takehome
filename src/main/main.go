@@ -47,15 +47,20 @@ func main() {
 
     // Split on empty space, and execute either a GET or SET call.
     tokens := strings.Fields(userInput) 
-   
     operation := tokens[0]
-    if operation == "GET" && len(tokens) == 2 {
+    // Require exactly two tokens, e.g. GET <key>.
+    if strings.EqualFold(operation, "GET") && len(tokens) == 2 {
+      
       key := tokens[1]
       resp := c.Get(key)
       fmt.Println("GET", key, "->", string(resp)) 
-   } else if operation == "SET" && len(tokens) == 3 {
+   } else if strings.EqualFold(operation, "SET") && len(tokens) >= 3 {
+      // Require 3+ tokens, e.g. GET <key> <value with spaces>
       key := tokens[1]
-      value := tokens[2]
+      valueIdxStart := strings.Index(userInput, tokens[2])
+      value := userInput[valueIdxStart:]
+      
+      fmt.Println("SET", key, "->", value)
       if err := c.Set(key, []byte(value)); err != nil {
         fmt.Println("Error setting", key, "->", value, "error:", err)
       }     

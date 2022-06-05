@@ -82,8 +82,6 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
     return
   }
   
-  fmt.Println("SET", string(key), "->", string(value))
-
   storeErr := s.store.Set(store.Key(key), store.Value(value))
   if storeErr != nil {
     // Return a StatusInternalServerError; error when storing 
