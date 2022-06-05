@@ -3,12 +3,13 @@ Unit Tests
   server
   filestore
   main
-Move Concurrency Ownership:
-  If there are many servers interacting with our filestore, it fails.
 Recovery Failure:
-  If we are reading a really large file, and it's interrupted, no big deal.
-  If we are writing a really large file, and it's interrupted, big deal;
-    reading it later might cause a breakage.
+  If the server is interrupted mid-set
+    the cache needs to handle interruption mid set.
+    the filestore needs to handle interruption mid set.
+  If the server is interrupted mid-get.
+    the cache needs to handle interruption mid get.
+    the filestore needs to handle interruption mid get.
 Integration Tests
   Hammering the server with multiple clients executing GET and SET
   Arbitrary length get/set
