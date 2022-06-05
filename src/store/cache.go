@@ -6,7 +6,7 @@ import (
   "fmt"
 )
 
-// A value and cache-relevant metadata, e.g. last accessed timestamp.
+// A value and cache-relevant metadata, e.g. its eviction order priority.
 type cacheEntry struct {
   value Value
   evictionListElement *list.Element
@@ -30,11 +30,12 @@ type Cache struct {
 }
 
 /** 
- * Set the key/value pair in memory, possibly performing eviction. 
+ * Set the key/value pair in memory, possibly performing eviction if need be. 
  */
 func (c *Cache) Set(key Key, value Value) error {
   if cachedEntry, ok := c.cache[key]; ok {
-    // We aren't overwriting the value; update the LACT.
+    // We aren't overwriting the value; update the eviction preference
+    // of this key.
     if cachedEntry.value.Equals(value) {    
       c.onKeyTouched(key)
       return nil
@@ -45,29 +46,8 @@ func (c *Cache) Set(key Key, value Value) error {
     }
   }
 
-  return c.addEntry(key, value) 
-}
-
-/**
- * Retrieve the key/value from memory, or return an error if the value is
- * missing. 
- */
-func (c *Cache) Get(key Key) (Value, error) {
-  if entry, ok := c.cache[key]; ok {
-    fmt.Println("\tCache hit!")
-    c.onKeyTouched(key); 
-    return entry.value, nil
-  } else {
-  }
- 
-  fmt.Println("\tCache miss!")
-  return "", errors.New(fmt.Sprintf("Cache miss for %v", key))
-}
-
-// Add a key/value pair to the cache, performing LRU if needed.
-// Return an error if the key/value pair was not added to memory.
-func (c *Cache) addEntry(key Key, value Value) error {
- if value.SizeOfBytes() >= c.capacityBytes {
+  // Add the key/value pair to the cache, performing LRU if needed.
+  if value.SizeOfBytes() >= c.capacityBytes {
     // We cannot store this entry in memory. Do nothing.
     return errors.New(fmt.Sprintf("Value too large; cannot store %v->%v in cache of size %v", key, value, c.capacityBytes))
   }
@@ -88,6 +68,21 @@ func (c *Cache) addEntry(key Key, value Value) error {
   c.sizeBytes = c.sizeBytes + entry.sizeBytes
   c.cache[key] = entry
   return nil 
+}
+
+/**
+ * Retrieve the key/value from memory, or return an error if the value is
+ * missing. 
+ */
+func (c *Cache) Get(key Key) (Value, error) {
+  if entry, ok := c.cache[key]; ok {
+    fmt.Println("\tCache hit!")
+    c.onKeyTouched(key); 
+    return entry.value, nil
+  }
+ 
+  fmt.Println("\tCache miss!")
+  return "", errors.New(fmt.Sprintf("Cache miss for %v", key))
 }
 
 // Evict the least recently used key from the cache, returning 
