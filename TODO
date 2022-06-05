@@ -3,18 +3,10 @@ Unit Tests
   server
   filestore
   main
-Recovery Failure:
-  If the server is interrupted mid-set
-    the cache needs to handle interruption mid set.
-    the filestore needs to handle interruption mid set.
-  If the server is interrupted mid-get.
-    the cache needs to handle interruption mid get.
-    the filestore needs to handle interruption mid get.
 Integration Tests
   Hammering the server with multiple clients executing GET and SET
   Arbitrary length get/set
   Enable server restarts
-Do I need a Shutdown method?
 Keep Values in Memory and periodically flush.
 Directory Sharding
 Telemetry Support
