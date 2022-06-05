@@ -8,7 +8,6 @@ Integration Tests
   Arbitrary length get/set
   Enable server restarts
 Do I need a Shutdown method?
-Improve Cache Eviction Performance
 Keep Values in Memory and periodically flush.
 Directory Sharding
 Telemetry Support

@@ -8,6 +8,10 @@ func (v Value) SizeOfBytes() int {
   return len(v)
 }
 
+func (v1 Value) Equals(v2 Value) bool {
+  return v1 == v2
+}
+
 
 // An interface for a KeyValue store.
 type KeyValueStore interface {

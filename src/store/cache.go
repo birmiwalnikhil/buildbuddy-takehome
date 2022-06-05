@@ -1,6 +1,7 @@
 package store
 
 import (
+  "container/list"
   "errors"
   "fmt"
 )
@@ -8,8 +9,7 @@ import (
 // A value and cache-relevant metadata, e.g. last accessed timestamp.
 type cacheEntry struct {
   value Value
-  // The most recently accessed time of the CacheEntry. 
-  lastAccessedTimestamp int
+  evictionListElement *list.Element
   sizeBytes int 
 }
 
@@ -21,10 +21,12 @@ type Cache struct {
   capacityBytes int
   // The current size of the cache, in bytes.
   sizeBytes int
-  // A monotonically increasing timestamp.
-  timestamp int
   // An in-memory key/value store.
   cache map[Key]*cacheEntry 
+  // A doubly-linked ordered list of Keys. Ordered by eviction priority;
+  // The first element should be evicted first, and the last element should be
+  // evicted last. 
+  evictionList *list.List
 }
 
 /** 
@@ -33,7 +35,7 @@ type Cache struct {
 func (c *Cache) Set(key Key, value Value) error {
   if cachedEntry, ok := c.cache[key]; ok {
     // We aren't overwriting the value; update the LACT.
-    if cachedEntry.value == value {    
+    if cachedEntry.value.Equals(value) {    
       c.onKeyTouched(key)
       return nil
     } else {
@@ -62,25 +64,26 @@ func (c *Cache) Get(key Key) (Value, error) {
   return "", errors.New(fmt.Sprintf("Cache miss for %v", key))
 }
 
-// Add a key/value pair to the cache, performing LRU if possible.
+// Add a key/value pair to the cache, performing LRU if needed.
 // Return an error if the key/value pair was not added to memory.
 func (c *Cache) addEntry(key Key, value Value) error {
-  entry := &cacheEntry{}
-  entry.value = value
-  entry.sizeBytes = value.SizeOfBytes()
-  entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
-  if entry.sizeBytes >= c.capacityBytes {
+ if value.SizeOfBytes() >= c.capacityBytes {
     // We cannot store this entry in memory. Do nothing.
     return errors.New(fmt.Sprintf("Value too large; cannot store %v->%v in cache of size %v", key, value, c.capacityBytes))
   }
 
   // Continually evict LRU elements until we have sufficient space.
-  for c.sizeBytes + entry.sizeBytes > c.capacityBytes {
+  for c.sizeBytes + value.SizeOfBytes() > c.capacityBytes {
       err := c.evictLru()
       if err != nil { 
         return err
       }
   }
+
+  entry := &cacheEntry{}
+  entry.value = value
+  entry.sizeBytes = value.SizeOfBytes()
+  entry.evictionListElement = c.evictionList.PushBack(key)
 
   c.sizeBytes = c.sizeBytes + entry.sizeBytes
   c.cache[key] = entry
@@ -89,29 +92,20 @@ func (c *Cache) addEntry(key Key, value Value) error {
 
 // Evict the least recently used key from the cache, returning 
 // an error in case of failure.
-// TODO: Improve to a non O(|cache|) operation, e.g. via min heaps.
 func (c *Cache) evictLru() error {
-  if len(c.cache) == 0 {
+  frontElement := c.evictionList.Front()
+  if frontElement == nil {
     return errors.New("Cannot evict an empty cache.")
   }
 
-  // Arbitrarily assign the lruKey, lruValue to be any entry in the cache.
-  var lruKey Key
-  var lruEntry *cacheEntry
-
-  for lruKey, lruEntry = range c.cache {
-    break
+  key := c.evictionList.Remove(frontElement).(Key)
+  cacheEntry, ok := c.cache[key]
+  if !ok {
+    return errors.New(fmt.Sprintf("Key %v missing from cache during eviction.", key))
   }
 
-  for key, entry := range c.cache {
-    if entry.lastAccessedTimestamp < lruEntry.lastAccessedTimestamp {
-      lruKey = key
-      lruEntry = entry
-    } 
-  }
-
-  c.sizeBytes = c.sizeBytes - lruEntry.sizeBytes
-  delete(c.cache, lruKey)
+  c.sizeBytes = c.sizeBytes - cacheEntry.sizeBytes
+  delete(c.cache, key)
   return nil
 }
 
@@ -121,14 +115,12 @@ func (c *Cache) onKeyTouched(key Key) error {
     return errors.New(fmt.Sprintf("Key missing in cache %v", key))
   }
 
-  entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
-  return nil
-}
+  if entry.evictionListElement == nil {
+    return errors.New(fmt.Sprintf("Nil pointer in eviction list for %v", key))
+  }
 
-func (c *Cache) getAndIncreaseTimestamp() int {
-  timestamp := c.timestamp
-  c.timestamp++
-  return timestamp
+  c.evictionList.MoveToBack(entry.evictionListElement)
+  return nil
 }
 
 // Construct a new Cache instance.
@@ -142,8 +134,8 @@ capacityBytes))
 
   c.capacityBytes = capacityBytes
   c.sizeBytes = 0
-  c.timestamp = 0
   c.cache = make(map[Key]*cacheEntry) 
+  c.evictionList = list.New()
 
   return c, nil
 }

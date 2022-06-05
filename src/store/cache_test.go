@@ -13,17 +13,18 @@ const (
   VALUE_LARGE = "..............1234567890abcdef..............."
 )
 
-func TestCacheUpdatesAccessedTime(t *testing.T) {
+func TestCacheUpdatesLruOrder(t *testing.T) {
   cache, _ := MakeCache(50)
   cache.Set(KEY, VALUE)
-
-  if cache.cache[KEY].lastAccessedTimestamp != 0 {
-    t.Errorf("Invalid timestamp for %v, expected %v", KEY, 0)
-  }
+  cache.Set(KEY2, VALUE)
   
-  cache.Set(KEY, VALUE_THAT_FITS)
-  if cache.cache[KEY].lastAccessedTimestamp != 1 {
-    t.Errorf("Invalid timestamp for %v, expected %v", KEY, 1)
+  // Current LRU order is KEY->KEY2
+  if cache.evictionList.Front().Value.(Key) != KEY {
+    t.Errorf("Invalid LRU ordering; expected %v at front", KEY)
+  }
+
+  if cache.evictionList.Back().Value.(Key) != KEY2 {
+    t.Errorf("Invalid LRU ordering; expected %v at back.", KEY)
   }
 }
 
@@ -114,10 +115,26 @@ func TestCacheGetUpdatesTimestamp(t *testing.T) {
   cache, _ := MakeCache(50)
 
   cache.Set(KEY, VALUE)
+  cache.Set(KEY2, VALUE_THAT_FITS) 
+
+  // LRU Ordering is KEY->KEY2.
+  if cache.evictionList.Front().Value.(Key) != KEY {
+    t.Errorf("Invalid LRU ordering; expected %v at front", KEY)
+  }
+
+  if cache.evictionList.Back().Value.(Key) != KEY2 {
+    t.Errorf("Invalid LRU ordering; expected %v at back.", KEY2)
+  }
+
   cache.Get(KEY)
-  
-  if entry, _ := cache.cache[KEY]; entry.lastAccessedTimestamp != 1 {
-    t.Errorf("Expected GET to increment the accessed timestamp of %v", KEY)
+
+  // LRU Ordering is KEY2->KEY.  
+  if cache.evictionList.Front().Value.(Key) != KEY2 {
+    t.Errorf("Invalid LRU ordering; expected %v at front", KEY2)
+  }
+
+  if cache.evictionList.Back().Value.(Key) != KEY {
+    t.Errorf("Invalid LRU ordering; expected %v at back.", KEY)
   }
 }
 
