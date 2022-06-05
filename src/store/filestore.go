@@ -1,9 +1,6 @@
 package store
 
 import (
-  "crypto/md5"
-  "hash"
-  "encoding/hex"
   "fmt"
   "os"
   "sync"
@@ -18,7 +15,8 @@ const (
  * Every key/value pair is allocated its own file.  
  *
  * <p> We enforce a deterministic strategy for identifying a 
- * filename given a Key. Currently, we filename for key == hash(key).
+ * filename given a Key. Currently, the key is the filename. We may use
+ * hashing to give some security, and compression for the value type.
  *
  * <p> Files are created in a temporary subdirectory of `FileStore.directory`.
  * On write completion, they are moved into `FileStore.directory`. This enables
@@ -30,8 +28,6 @@ type FileStore struct {
   // The temporary directory which holds temporary files. Reset on
   // instantiation of the file store. 
   tempDirectory string
-  // The hashing strategy for this file store.
-  hash hash.Hash
   // A mutex used to synchronize access to the underlying file directory.
   // A RW lock _may_ improve performance; I'm not sure what the concurrency
   // requirements are of a UNIX based file system.
@@ -60,7 +56,7 @@ func (f *FileStore) Set(key Key, value Value) error {
       // IO Error when opening the file; return the error.
       return err
     }
-   
+
     // Write the value into the opened file.
     _, err2 := tmpFile.Write([]byte(value))
     if err2 != nil {
@@ -93,8 +89,7 @@ func (f *FileStore) Get(key Key) (Value, error) {
 // Identify a file path given a Key. If isTmpFile is true, the path
 // will include the temporary directory. 
 func (f *FileStore) getFilePath(key Key, dir string) string {
-  hash := f.hash.Sum([]byte(key))
-  return fmt.Sprintf(dir + "/%s", hex.EncodeToString(hash))
+  return fmt.Sprintf(dir + "/%s", string(key))
 }
 
 // To be called on completion of writing to a temporary file, e.g.
@@ -134,6 +129,5 @@ func MakeFileStore(directory string) (*FileStore, error) {
   }
 
   fs.mutex = &sync.Mutex{} 
-  fs.hash = md5.New()
   return fs, nil
 } 
