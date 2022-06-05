@@ -43,12 +43,6 @@ func (f *FileStore) Set(key Key, value Value) error {
     defer f.mutex.Unlock()
     f.mutex.Lock()
 
-    // 1) Create a temp file in the temporary directory.
-    // 2) Write to the temporary file.
-    // 3) On completion:
-    //    - Close the file.
-    //    - Promote the temporary file to a permanent file?
-    //    - Move the temporary file from the temp directory.
     filePath := f.getFilePath(key, f.tempDirectory)
     tmpFile, err := 
       os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
