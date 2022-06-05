@@ -89,7 +89,6 @@ func (c *Cache) addEntry(key Key, value Value) error {
   entry.value = value
   entry.sizeBytes = value.SizeOfBytes()
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
-  
   if entry.sizeBytes >= c.capacityBytes {
     // We cannot store this entry in memory. Do nothing.
     return VALUE_TOO_LARGE 
@@ -164,3 +163,4 @@ func MakeCache(capacityBytes int, upstream KeyValueStore) *Cache {
 
   return c
 }
+
