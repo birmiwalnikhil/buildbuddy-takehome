@@ -14,8 +14,9 @@ type KeyValueStore interface {
   /**
    * Associate the {@code key} with the {@code value}.
    * Return any error encountered (e.g. an IO failure 
-   * if writing to disk), or nil if the operation was succesful.
-   */
+   * if writing to disk, or a memory failure if the size of the value exceeds
+   * the capacity of a cache.)
+  */
   Set(key Key, value Value) error
   
   /** 

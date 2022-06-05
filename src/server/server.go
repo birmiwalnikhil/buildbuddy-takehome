@@ -83,9 +83,9 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
   }
   
   storeErr := s.store.Set(store.Key(key), store.Value(value))
-  if storeErr != nil {
-    // Return a StatusInternalServerError; error when storing 
-    // the key/value pair.
+  if storeErr != nil && storeErr != store.VALUE_TOO_LARGE{
+    // A VALUE_TOO_LARGE exception is benign; report to Telemetry.
+    // All other errors indicate that the Set operation failed; return a 500.
     w.WriteHeader(http.StatusInternalServerError)
     fmt.Fprintln(w, storeErr)
     return

@@ -5,6 +5,13 @@ import (
   "fmt"
 )
 
+var (
+  // An error to report when a Value cannot be stored in the cache because
+  // the value is too large.
+  VALUE_TOO_LARGE = 
+    errors.New("Value too large; will not be stored in cache.")
+)
+
 // A value and cache-relevant metadata, e.g. last accessed timestamp.
 type cacheEntry struct {
   value Value
@@ -30,16 +37,27 @@ type Cache struct {
 }
 
 /** 
- * Set the key/value store in memory, possibly performing eviction. 
+ * Set the key/value pair in memory, possibly performing eviction. 
  */
 func (c *Cache) Set(key Key, value Value) error {
   // Maintain the upstream and the cache in sync.
   // On failure, do not set the key in the in-memory store either.
   if err := c.upstream.Set(key, value); err != nil {
     return err
-  }  
-  
-  return c.addEntry(key, value)
+  }
+
+  if cachedValue, ok := c.cache[key]; ok {
+    if cachedValue.value == value {    
+      c.onKeyTouched(key)
+      return nil
+    } else {
+      // Delete the value from the cache to maintain consistency with upstream.
+      c.sizeBytes = c.sizeBytes - cachedValue.sizeBytes
+      delete(c.cache, key) 
+    }
+  }
+
+  return c.addEntry(key, value) 
 }
 
 /**
@@ -72,18 +90,21 @@ func (c *Cache) addEntry(key Key, value Value) error {
   entry.sizeBytes = value.SizeOfBytes()
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
   
+  if entry.sizeBytes >= c.capacityBytes {
+    // We cannot store this entry in memory. Do nothing.
+    return VALUE_TOO_LARGE 
+  }
+
   // Continually evict LRU elements until we have sufficient space.
-  if entry.sizeBytes < c.capacityBytes {  
-    for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
+  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
       err := c.evictLru()
       if err != nil { 
         return err
       }
-    }
   }
 
-  c.sizeBytes += entry.sizeBytes
-  c.cache[key] = entry 
+  c.sizeBytes = c.sizeBytes + entry.sizeBytes
+  c.cache[key] = entry
   return nil 
 }
 

@@ -1,4 +1,3 @@
-Fix main which accepts strings with empty spaces.
 Unit Tests
   client
   server
