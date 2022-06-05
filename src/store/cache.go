@@ -4,6 +4,7 @@ import (
   "container/list"
   "errors"
   "fmt"
+  "sync"
 )
 
 // A value and cache-relevant metadata, e.g. its eviction order priority.
@@ -14,8 +15,6 @@ type cacheEntry struct {
 }
 
 // An LRU cache that supports a Key/Value store.
-// This class is not thread safe; callers are expected to serialize
-// reads and writes appropriately.
 type Cache struct {
  // The maximum size of the cache, in bytes.
   capacityBytes int
@@ -27,12 +26,18 @@ type Cache struct {
   // The first element should be evicted first, and the last element should be
   // evicted last. 
   evictionList *list.List
+  // A mutex to allow multiple GoRoutines to utilize the cache.
+  // Note that we cannot use a RW lock; there may be contention if multiple
+  // GET threads are modifying the eviction list.
+  mutex *sync.Mutex
 }
 
 /** 
  * Set the key/value pair in memory, possibly performing eviction if need be. 
  */
 func (c *Cache) Set(key Key, value Value) error {
+  defer c.mutex.Unlock()
+  c.mutex.Lock()
   if cachedEntry, ok := c.cache[key]; ok {
     // We aren't overwriting the value; update the eviction preference
     // of this key.
@@ -75,6 +80,8 @@ func (c *Cache) Set(key Key, value Value) error {
  * missing. 
  */
 func (c *Cache) Get(key Key) (Value, error) {
+  defer c.mutex.Unlock()
+  c.mutex.Lock()
   if entry, ok := c.cache[key]; ok {
     fmt.Println("\tCache hit!")
     c.onKeyTouched(key); 
@@ -131,6 +138,7 @@ capacityBytes))
   c.sizeBytes = 0
   c.cache = make(map[Key]*cacheEntry) 
   c.evictionList = list.New()
+  c.mutex = &sync.Mutex{}
 
   return c, nil
 }
