@@ -12,20 +12,8 @@ const (
   VALUE_LARGE = "..............1234567890abcdef..............."
 )
 
-func TestCacheSetsUpstream(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(10, upstream)
-  cache.Set(KEY, VALUE)
-  
-  if len(upstream.SetCalls) != 1 || upstream.SetCalls[0].Key != KEY ||
-upstream.SetCalls[0].Value != VALUE {
-    t.Errorf("Missing upstream set; expected %v->%v", KEY, VALUE)
-  }
-}
-
 func TestCacheUpdatesAccessedTime(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
+  cache := MakeCache(50)
   cache.Set(KEY, VALUE)
 
   if cache.cache[KEY].lastAccessedTimestamp != 0 {
@@ -38,9 +26,19 @@ func TestCacheUpdatesAccessedTime(t *testing.T) {
   }
 }
 
+func TestCacheSetsEntry(t *testing.T) {
+  cache := MakeCache(50)
+  if err := cache.Set(KEY, VALUE); err != nil {
+    t.Errorf("Error when setting %v->%v in cache", KEY, VALUE)
+  }
+
+  if val, err := cache.Get(KEY); err != nil || val != VALUE {
+    t.Errorf("Error retrieving %v from cache", KEY)
+  }
+}
+
 func TestCacheDeletesOldKey(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
+  cache := MakeCache(50)
   cache.Set(KEY, VALUE)
 
   if val, _ := cache.Get(KEY); val != VALUE {
@@ -54,19 +52,16 @@ func TestCacheDeletesOldKey(t *testing.T) {
 }
 
 func TestCacheAddsEntryThrowsValueTooLarge(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(10, upstream)
+  cache := MakeCache(10)
   
-  if err := cache.Set(KEY, VALUE_LARGE); err != VALUE_TOO_LARGE {
-    t.Errorf("Expected %v when setting %v->%v", VALUE_TOO_LARGE, KEY,
-VALUE_LARGE)
+  if err := cache.Set(KEY, VALUE_LARGE); err == nil {
+    t.Errorf("Expected error when setting %v->%v",  KEY, VALUE_LARGE)
   } 
 
 }
 
 func TestCacheEvictsIfNeeded(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(len(VALUE) + len(VALUE_THAT_FITS) - 1, upstream)
+  cache := MakeCache(len(VALUE) + len(VALUE_THAT_FITS) - 1)
 
   cache.Set(KEY, VALUE)
   cache.Set(KEY2, VALUE_THAT_FITS) // Evicts KEY->VALUE
@@ -81,8 +76,7 @@ func TestCacheEvictsIfNeeded(t *testing.T) {
 }
 
 func TestCacheGetUpdatesTimestamp(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
+  cache := MakeCache(50)
 
   cache.Set(KEY, VALUE)
   cache.Get(KEY)
@@ -92,43 +86,3 @@ func TestCacheGetUpdatesTimestamp(t *testing.T) {
   }
 }
 
-func TestCacheUsesUpstreamOnCacheMiss(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
-
-  cache.Get(KEY)
-  if len(upstream.GetCalls) != 1 || upstream.GetCalls[0] != KEY {
-    t.Errorf("Expected upstream GET call on cache miss of %v", KEY)
-  }
-}
-
-func TestCacheUpdatesCacheFromUpstream(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
-
-  upstream.SetNextGet(VALUE, nil)
-  cache.Get("asd")
-  
-  if entry, ok := cache.cache["asd"]; !ok || entry.value != VALUE {
-    t.Errorf("Expected upstream to populate the in memory cache for %v", KEY)
-  } 
-}
-
-func TestCacheRepeatedGetsWillCacheHit(t *testing.T) {
-  upstream := &FakeKeyValueStore{}
-  cache := MakeCache(50, upstream)
-  
-  upstream.SetNextGet(VALUE, nil)
-  if val, _ := cache.Get(KEY); val != VALUE {
-    t.Errorf("Expected %v->%v entry", KEY, VALUE)
-  }
-
-  // Next Get call should be from memory.
-  if val, _ := cache.Get(KEY); val != VALUE {
-    t.Errorf("Expected %v->%v entry from memory", KEY, VALUE)
-  }
-
-  if len(upstream.GetCalls) != 1 || upstream.GetCalls[0] != KEY {
-    t.Errorf("Error invoking upstream.")
-  }
-}

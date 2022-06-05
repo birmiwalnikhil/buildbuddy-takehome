@@ -13,10 +13,9 @@ func (v Value) SizeOfBytes() int {
 type KeyValueStore interface {
   /**
    * Associate the {@code key} with the {@code value}.
-   * Return any error encountered (e.g. an IO failure 
-   * if writing to disk, or a memory failure if the size of the value exceeds
-   * the capacity of a cache.)
-  */
+   * If the key/value pair could not be set, return the error that occurred
+   * (e.g. an IO failure if writing to disk).
+   */
   Set(key Key, value Value) error
   
   /** 

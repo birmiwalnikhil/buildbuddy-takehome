@@ -5,13 +5,6 @@ import (
   "fmt"
 )
 
-var (
-  // An error to report when a Value cannot be stored in the cache because
-  // the value is too large.
-  VALUE_TOO_LARGE = 
-    errors.New("Value too large; will not be stored in cache.")
-)
-
 // A value and cache-relevant metadata, e.g. last accessed timestamp.
 type cacheEntry struct {
   value Value
@@ -24,9 +17,7 @@ type cacheEntry struct {
 // This class is not thread safe; callers are expected to serialize
 // reads and writes appropriately.
 type Cache struct {
-  // The upstream KeyValueStore of the cache.
-  upstream KeyValueStore
-  // The maximum size of the cache, in bytes.
+ // The maximum size of the cache, in bytes.
   capacityBytes int
   // The current size of the cache, in bytes.
   sizeBytes int
@@ -38,21 +29,17 @@ type Cache struct {
 
 /** 
  * Set the key/value pair in memory, possibly performing eviction. 
+ * Re
  */
 func (c *Cache) Set(key Key, value Value) error {
-  // Maintain the upstream and the cache in sync.
-  // On failure, do not set the key in the in-memory store either.
-  if err := c.upstream.Set(key, value); err != nil {
-    return err
-  }
-
-  if cachedValue, ok := c.cache[key]; ok {
-    if cachedValue.value == value {    
+  if cachedEntry, ok := c.cache[key]; ok {
+    // We aren't overwriting the value; update the LACT.
+    if cachedEntry.value == value {    
       c.onKeyTouched(key)
       return nil
     } else {
-      // Delete the value from the cache to maintain consistency with upstream.
-      c.sizeBytes = c.sizeBytes - cachedValue.sizeBytes
+      // Overwrite the value by deleting then adding.
+      c.sizeBytes = c.sizeBytes - cachedEntry.sizeBytes
       delete(c.cache, key) 
     }
   }
@@ -61,31 +48,23 @@ func (c *Cache) Set(key Key, value Value) error {
 }
 
 /**
- * Retrieve the key/value from memory. On cache miss, consult the upstream
- * store.
+ * Retrieve the key/value from memory, or return an error if the value is
+ * missing. 
  */
 func (c *Cache) Get(key Key) (Value, error) {
   if entry, ok := c.cache[key]; ok {
     fmt.Println("\tCache hit!")
     c.onKeyTouched(key); 
     return entry.value, nil
+  } else {
   }
-
-  value, err := c.upstream.Get(key)
-  if err != nil {
-    return "", err 
-  }
-
-  // Attempt to store the value into the cache.
-  // If adding to the cache fails, log an error to Telemetry but 
-  // return the value to the caller.
-  c.addEntry(key, value) // Return value ignored.
-  
+ 
   fmt.Println("\tCache miss!")
-  return value, nil
+  return "", errors.New(fmt.Sprintf("Cache miss for %v", key))
 }
 
-// Add a key/value pair to the cache.
+// Add a key/value pair to the cache, performing LRU if possible.
+// Return an error if the key/value pair was not added to memory.
 func (c *Cache) addEntry(key Key, value Value) error {
   entry := &cacheEntry{}
   entry.value = value
@@ -93,7 +72,7 @@ func (c *Cache) addEntry(key Key, value Value) error {
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
   if entry.sizeBytes >= c.capacityBytes {
     // We cannot store this entry in memory. Do nothing.
-    return VALUE_TOO_LARGE 
+    return errors.New(fmt.Sprintf("Value too large; cannot store %v->%v in cache of size %v", key, value, c.capacityBytes))
   }
 
   // Continually evict LRU elements until we have sufficient space.
@@ -154,10 +133,9 @@ func (c *Cache) getAndIncreaseTimestamp() int {
 }
 
 // Construct a new Cache instance.
-func MakeCache(capacityBytes int, upstream KeyValueStore) *Cache {
+func MakeCache(capacityBytes int) *Cache {
   c := &Cache{}
 
-  c.upstream = upstream
   c.capacityBytes = capacityBytes
   c.sizeBytes = 0
   c.timestamp = 0
