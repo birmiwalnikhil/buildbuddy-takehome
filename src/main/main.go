@@ -31,13 +31,17 @@ func main() {
   
   // Optionally configure a cache.
   if (flagEnabled(flagEnableCaching, os.Args)) {
-    cache = store.MakeCache(/* capacityBytes= */ 20)
+    cache, err = store.MakeCache(/* capacityBytes= */ 0)
+    if err != nil {
+      fmt.Println("Error making cache; aborting.")
+      return
+    }
   }
    
   s := server.MakeServer(fs, cache)
   c := client.MakeClient()
   reader := bufio.NewReader(os.Stdin)
-  go s.Start() // This is a blocking call.
+  go s.Start() // This is a blocking call executed on a GoRoutine.
   
   // Accept user input, and convert it into either a Get or Set.
   for {

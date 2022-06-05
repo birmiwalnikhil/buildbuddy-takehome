@@ -133,7 +133,12 @@ func (c *Cache) getAndIncreaseTimestamp() int {
 }
 
 // Construct a new Cache instance.
-func MakeCache(capacityBytes int) *Cache {
+func MakeCache(capacityBytes int) (*Cache, error) {
+  if capacityBytes <= 0 {
+    return nil, errors.New(fmt.Sprintf("Cannot create a cache of capacity %v",
+capacityBytes))
+  }
+  
   c := &Cache{}
 
   c.capacityBytes = capacityBytes
@@ -141,6 +146,6 @@ func MakeCache(capacityBytes int) *Cache {
   c.timestamp = 0
   c.cache = make(map[Key]*cacheEntry) 
 
-  return c
+  return c, nil
 }
 
