@@ -18,6 +18,8 @@ const (
 // HttpClients may be instantiated to interact with the Server.
 func main() {
   var fs store.KeyValueStore
+  var cache *store.Cache
+
   var err error
   // Configure the server via command line arguments. 
   fs, err = store.MakeFileStore("/tmp/buildbuddy")
@@ -26,13 +28,13 @@ func main() {
     return 
   }
 
+  
   // Optionally configure a cache.
   if (flagEnabled(flagEnableCaching, os.Args)) {
-    cache := store.MakeCache(/* capacityBytes= */ 20, fs)
-    fs = cache
+    cache = store.MakeCache(/* capacityBytes= */ 20)
   }
    
-  s := server.MakeServer(fs)
+  s := server.MakeServer(fs, cache)
   c := client.MakeClient()
   reader := bufio.NewReader(os.Stdin)
   go s.Start() // This is a blocking call.

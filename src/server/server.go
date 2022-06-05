@@ -17,6 +17,8 @@ type Server struct {
   rwlock sync.RWMutex
   // The key/value store.
   store store.KeyValueStore 
+  // An optionally enabled cache.
+  cache *store.Cache
 }
 
 // Handler for a /get call. Reads a key/value pair from the underlying
@@ -35,15 +37,34 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   }
 
   key := keyQuery[0]
-  resp, err := s.store.Get(store.Key(key))
+
+  // First check the cache to see if the value is present.
+  if s.cache != nil {
+    if value, err := s.cache.Get(store.Key(key)); err == nil {
+      fmt.Fprintln(w, value)
+      return
+    }
+  }
+
+  // Retrieve the value from the filestore.
+  value, err := s.store.Get(store.Key(key))
   if err != nil {
     // Return a StatusInternalServerError; failure retrieving the value.
     w.WriteHeader(http.StatusInternalServerError)
     return 
   }
 
+  // Write the value into the cache. Any errors here are non-fatal; they should
+  // be logged to Telemetry. TODO: Migrate this logic off the critical path of
+  // GET.
+  if s.cache != nil {
+    if cacheSetErr := s.cache.Set(store.Key(key), store.Value(value)); 
+        cacheSetErr != nil {
+        // Log this error to telemetry. 
+    }
+  }
   // Output the value back to the caller.
-  fmt.Fprintln(w, resp)
+  fmt.Fprintln(w, value)
 }
 
 // Handler for a /set call. The HTTP Body is a JSON containing a 
@@ -81,14 +102,20 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusBadRequest)
     return
   }
-  
-  storeErr := s.store.Set(store.Key(key), store.Value(value))
-  if storeErr != nil && storeErr != store.VALUE_TOO_LARGE{
-    // A VALUE_TOO_LARGE exception is benign; report to Telemetry.
-    // All other errors indicate that the Set operation failed; return a 500.
+
+  // Attempt to write the value to the filestore.
+  if err := s.store.Set(store.Key(key), store.Value(value)); err != nil {
+    // Failure writing to fliestore; return a 500.
     w.WriteHeader(http.StatusInternalServerError)
-    fmt.Fprintln(w, storeErr)
     return
+  } 
+  
+  // Maintain consistency between the cache and the filestore.
+  // Any errors thrown here are non-fatal; they should be logged to telemetry.
+  if s.cache != nil {  
+    if err := s.cache.Set(store.Key(key), store.Value(value)); err != nil {
+      // Log a caching failure to telemetry.
+    }
   }
 }
 
@@ -104,8 +131,9 @@ func (s *Server) Start() {
 }
 
 // Make a server, providing some configuration parameters.
-func MakeServer(store store.KeyValueStore) *Server {
+func MakeServer(fs store.KeyValueStore, cache *store.Cache) *Server {
   server := &Server {}  
-  server.store = store
+  server.store = fs
+  server.cache = cache 
   return server
 }
