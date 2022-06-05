@@ -113,3 +113,22 @@ func TestCacheUpdatesCacheFromUpstream(t *testing.T) {
     t.Errorf("Expected upstream to populate the in memory cache for %v", KEY)
   } 
 }
+
+func TestCacheRepeatedGetsWillCacheHit(t *testing.T) {
+  upstream := &FakeKeyValueStore{}
+  cache := MakeCache(50, upstream)
+  
+  upstream.SetNextGet(VALUE, nil)
+  if val, _ := cache.Get(KEY); val != VALUE {
+    t.Errorf("Expected %v->%v entry", KEY, VALUE)
+  }
+
+  // Next Get call should be from memory.
+  if val, _ := cache.Get(KEY); val != VALUE {
+    t.Errorf("Expected %v->%v entry from memory", KEY, VALUE)
+  }
+
+  if len(upstream.GetCalls) != 1 || upstream.GetCalls[0] != KEY {
+    t.Errorf("Error invoking upstream.")
+  }
+}

@@ -66,6 +66,7 @@ func (c *Cache) Set(key Key, value Value) error {
  */
 func (c *Cache) Get(key Key) (Value, error) {
   if entry, ok := c.cache[key]; ok {
+    fmt.Println("\tCache hit!")
     c.onKeyTouched(key); 
     return entry.value, nil
   }
@@ -80,6 +81,7 @@ func (c *Cache) Get(key Key) (Value, error) {
   // return the value to the caller.
   c.addEntry(key, value) // Return value ignored.
   
+  fmt.Println("\tCache miss!")
   return value, nil
 }
 
