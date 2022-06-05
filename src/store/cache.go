@@ -29,7 +29,6 @@ type Cache struct {
 
 /** 
  * Set the key/value pair in memory, possibly performing eviction. 
- * Re
  */
 func (c *Cache) Set(key Key, value Value) error {
   if cachedEntry, ok := c.cache[key]; ok {
@@ -76,7 +75,7 @@ func (c *Cache) addEntry(key Key, value Value) error {
   }
 
   // Continually evict LRU elements until we have sufficient space.
-  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
+  for c.sizeBytes + entry.sizeBytes > c.capacityBytes {
       err := c.evictLru()
       if err != nil { 
         return err
