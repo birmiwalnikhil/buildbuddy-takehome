@@ -31,7 +31,7 @@ func main() {
   
   // Optionally configure a cache.
   if (flagEnabled(flagEnableCaching, os.Args)) {
-    cache, err = store.MakeCache(/* capacityBytes= */ 0)
+    cache, err = store.MakeCache(/* capacityBytes= */ 10)
     if err != nil {
       fmt.Println("Error making cache; aborting.")
       return
