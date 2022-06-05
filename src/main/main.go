@@ -47,6 +47,15 @@ func main() {
 
     // Split on empty space, and execute either a GET or SET call.
     tokens := strings.Fields(userInput) 
+    if strings.EqualFold(userInput, "exit") {
+      return
+    }
+
+    if len(tokens) < 2 {
+      fmt.Println("Invalid input.")
+      continue
+    }
+
     operation := tokens[0]
     // Require exactly two tokens, e.g. GET <key>.
     if strings.EqualFold(operation, "GET") && len(tokens) == 2 {

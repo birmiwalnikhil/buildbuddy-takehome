@@ -25,7 +25,6 @@ type Cache struct {
   sizeBytes int
   // A monotonically increasing timestamp.
   timestamp int
-  // A min-heap of the least recently used CacheKey.
   // An in-memory key/value store.
   cache map[Key]*cacheEntry 
 }
@@ -39,8 +38,8 @@ func (c *Cache) Set(key Key, value Value) error {
   if err := c.upstream.Set(key, value); err != nil {
     return err
   }  
-
- return c.addEntry(key, value)
+  
+  return c.addEntry(key, value)
 }
 
 /**
@@ -59,10 +58,10 @@ func (c *Cache) Get(key Key) (Value, error) {
   }
 
   // Attempt to store the value into the cache.
-  if err2 := c.addEntry(key, value); err2 != nil {
-    return "", err2
-  }
-
+  // If adding to the cache fails, log an error to Telemetry but 
+  // return the value to the caller.
+  c.addEntry(key, value) // Return value ignored.
+  
   return value, nil
 }
 
@@ -74,10 +73,12 @@ func (c *Cache) addEntry(key Key, value Value) error {
   entry.lastAccessedTimestamp = c.getAndIncreaseTimestamp()
   
   // Continually evict LRU elements until we have sufficient space.
-  for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
-    err := c.evictLru()
-    if err != nil { 
-      return err
+  if entry.sizeBytes < c.capacityBytes {  
+    for c.sizeBytes + entry.sizeBytes >= c.capacityBytes {
+      err := c.evictLru()
+      if err != nil { 
+        return err
+      }
     }
   }
 

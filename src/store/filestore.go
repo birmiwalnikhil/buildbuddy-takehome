@@ -51,7 +51,7 @@ func (f *FileStore) Get(key Key) (Value, error) {
     // Error when reading the file (e.g. corrupted file, file missing).
     return "", err
   }
-  
+ 
   return Value(value), nil
 }
 
