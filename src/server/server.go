@@ -6,6 +6,7 @@ import(
   "io/ioutil"
   "log"
   "net/http"
+  "sync"
   "buildbuddy.takehome.com/src/store"
 )
 
@@ -16,11 +17,16 @@ type Server struct {
   filestore store.KeyValueStore 
   // An optionally enabled cache.
   cache store.KeyValueStore
+  // A mutex used for serializing /set and /get calls.
+  mutex *sync.Mutex
 }
 
 // Handler for a /get call. Reads a key/value pair from the underlying
 // store, and returns the value.
 func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
+  defer s.mutex.Unlock()
+  s.mutex.Lock()
+
   // Extract the query parameter `key`.
   query := r.URL.Query()
   keyQuery, ok := query["key"]
@@ -66,7 +72,10 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 // Handler for a /set call. The HTTP Body is a JSON containing a 
 // Key/Value Pair (e.g. { "key" : "a key", "value": "an arbitrary value" })
 func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
+  defer s.mutex.Unlock()
   defer r.Body.Close()
+
+  s.mutex.Lock()
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
     // Return a StatusInternalServerError; error reading the POST body.
@@ -123,5 +132,6 @@ func MakeServer(fs *store.FileStore, cache *store.Cache) *Server {
   server := &Server {}  
   server.filestore = fs
   server.cache = cache 
+  server.mutex = &sync.Mutex{}
   return server
 }
