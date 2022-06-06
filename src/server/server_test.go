@@ -3,6 +3,7 @@ package server
 import (
   "errors"
   "fmt"
+  "sync"
   "testing"
   "net/http"
   "net/http/httptest"
@@ -18,6 +19,7 @@ func TestGetMissingKeyReturns400(t *testing.T) {
   s := &Server {
     filestore: fs,
     cache: nil,
+    mutex: &sync.Mutex{},
   }  
   s.handleGet(w, req)
  
@@ -35,6 +37,7 @@ func TestGetReturnsCacheHit(t *testing.T) {
   s := &Server {
     filestore: fs,
     cache: cache,
+    mutex: &sync.Mutex{},
   }  
 
   // Specify a cache hit.
@@ -71,6 +74,7 @@ func TestGetTriesFilestoreOnCacheMiss(t *testing.T) {
   s := &Server {
     filestore: fs,
     cache: cache,
+    mutex: &sync.Mutex{},
   }  
 
   key := "this is a key"
@@ -102,6 +106,7 @@ func TestGetReportsFilestoreFailure(t *testing.T) {
   s := &Server {
     filestore: fs,
     cache: nil,
+    mutex: &sync.Mutex{},
   }
 
   // Add a key to the query.
@@ -131,6 +136,7 @@ func TestGetSynchronizesFilestoreAndCache(t *testing.T) {
   s := &Server {
     filestore: fs,
     cache: c,
+    mutex: &sync.Mutex{},
   }
 
 

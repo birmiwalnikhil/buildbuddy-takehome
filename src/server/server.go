@@ -131,7 +131,9 @@ func (s *Server) Start() {
 func MakeServer(fs *store.FileStore, cache *store.Cache) *Server {
   server := &Server {}  
   server.filestore = fs
-  server.cache = cache 
+  if cache != nil {
+    server.cache = cache
+  }
   server.mutex = &sync.Mutex{}
   return server
 }
