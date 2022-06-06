@@ -54,12 +54,21 @@ func TestCacheDeletesOldKey(t *testing.T) {
 }
 
 func TestCacheAddsEntryThrowsValueTooLarge(t *testing.T) {
-  cache, _ := MakeCache(10)
-  
+  cache, _ := MakeCache(15)
+
+  cache.Set(KEY, VALUE)
+  if val, err := cache.Get(KEY); err != nil || val != VALUE {
+    t.Errorf("Error inserting %v->%v", KEY, VALUE)
+  }  
+
   if err := cache.Set(KEY, VALUE_LARGE); err == nil {
     t.Errorf("Expected error when setting %v->%v",  KEY, VALUE_LARGE)
   } 
 
+  // There should be nothing in the cache.
+  if cache.sizeBytes != 0 || len(cache.cache) != 0 {
+    t.Errorf("Expecting empty cache due to eviction.")
+  }
 }
 
 func TestCacheEvictsIfNeeded(t *testing.T) {

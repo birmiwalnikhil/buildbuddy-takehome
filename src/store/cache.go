@@ -39,16 +39,9 @@ func (c *Cache) Set(key Key, value Value) error {
   defer c.mutex.Unlock()
   c.mutex.Lock()
   if cachedEntry, ok := c.cache[key]; ok {
-    // We aren't overwriting the value; update the eviction preference
-    // of this key.
-    if cachedEntry.value.Equals(value) {    
-      c.onKeyTouched(key)
-      return nil
-    } else {
-      // Overwrite the value by deleting then adding.
-      c.sizeBytes = c.sizeBytes - cachedEntry.sizeBytes
-      delete(c.cache, key) 
-    }
+    // Delete any pre-existing entry in the cache.
+    c.sizeBytes = c.sizeBytes - cachedEntry.sizeBytes
+    delete(c.cache, key)
   }
 
   // Add the key/value pair to the cache, performing LRU if needed.
