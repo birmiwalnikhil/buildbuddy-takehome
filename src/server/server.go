@@ -10,11 +10,12 @@ import(
 )
 
 // An HTTP Server that supports GET and SET operations.
+// Create instances via the MakeServer method.
 type Server struct {
   // The file store.
-  filestore *store.FileStore 
+  filestore store.KeyValueStore 
   // An optionally enabled cache.
-  cache *store.Cache
+  cache store.KeyValueStore
 }
 
 // Handler for a /get call. Reads a key/value pair from the underlying
@@ -34,7 +35,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   // Check the cache to see if the value is present.
   if s.cache != nil {
     if value, err := s.cache.Get(store.Key(key)); err == nil {
-      fmt.Fprintln(w, value)
+      fmt.Fprint(w, value)
       return
     }
   }
@@ -59,7 +60,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   }
 
   // Output the value back to the caller.
-  fmt.Fprintln(w, value)
+  fmt.Fprint(w, value)
 }
 
 // Handler for a /set call. The HTTP Body is a JSON containing a 
