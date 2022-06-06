@@ -13,22 +13,29 @@ var (
   EMPTY_BUFFER []byte
 )
 
-// A collection of configuration parameters for 
-// an HTTP Client that interacts with the server.
+// A thin wrapper around a HTTP Client. Used to 
+// marshal Get and Set calls to the API server.
 type Client struct {
+    // The URL of the Get Endpoint, e.g. `http://localhost:8080/get`.
+    getUrl string
+    // The URL of the Set Endpoint, e.g. `http://localhost:8080/set`.
+    setUrl string
     httpClient *http.Client
 }
 
 /** 
- * A utility method for the HttpClient to invoke 
- * /get on the API server. Returns the stored
- * value from a previous /set call, or an error 
- * on failure.
- */
-func (c *Client) Get(key string) []byte {
-  req, err := http.NewRequest("GET", "http://localhost:8080/get", nil)
+ * Invoke a /get request for a specified `key` on the API server. Returns the 
+ * stored value, if any, or any errors (e.g. a network connection failure, an 
+ * HTTP error code, etc.) 
+*/
+func (c *Client) Get(key string) ([]byte, error) {
+  if len(key) == 0 {
+    return EMPTY_BUFFER, errors.New("GET cannot be called on an empty key.")
+  }
+
+  req, err := http.NewRequest("GET", c.getUrl, nil)
   if err != nil {
-    return EMPTY_BUFFER
+    return EMPTY_BUFFER, err
   }
 
   // Add the key as a query parameter to the request.
@@ -39,12 +46,13 @@ func (c *Client) Get(key string) []byte {
   // Execute the request.
   resp, err := c.httpClient.Do(req) 
   if err != nil {
-    return EMPTY_BUFFER
+    return EMPTY_BUFFER, err
   }
   
   if resp.StatusCode != http.StatusOK {
     // The server was not able to service this request.
-    return EMPTY_BUFFER
+    return EMPTY_BUFFER, errors.New(fmt.Sprintf("HttpError %v from server",
+resp.StatusCode))
   }
 
   defer resp.Body.Close()
@@ -52,18 +60,26 @@ func (c *Client) Get(key string) []byte {
 
   if err != nil {
     // Error reading the response body.
-    return EMPTY_BUFFER
+    return EMPTY_BUFFER, err
   }
   
-  return buffer
+  return buffer, nil
 }
 
-/** 
- * A utility method for the HttpClient to invoke /set 
- * on the API server. Returns an error when invoking the request,
- * if any.
+/**
+ * Invoke the /set API with the provided `key`->`value` pair. Return any
+ * failures (e.g. a malformed request, a connection failure, etc.) or nil
+ * otherwise.
  */
 func (c *Client) Set(key string, value []byte) error {
+  if len(key) == 0 {
+    return errors.New("Cannot SET an empty key.")
+  }
+
+  if len(value) == 0 {
+    return errors.New("Cannot SET an empty value.")
+  }
+
   // Marshal the key/value pair into a JSON.
   kv := map[string][]byte {
     "key": []byte(key),
@@ -74,10 +90,10 @@ func (c *Client) Set(key string, value []byte) error {
   if err != nil {
     return err
   }
-   
+
+  // Execute the /set request.   
   resp, postErr := 
-    http.Post(
-      "http://localhost:8080/set", "application/json", bytes.NewBuffer(jsonKv)) 
+    http.Post(c.setUrl, "application/json", bytes.NewBuffer(jsonKv)) 
   if postErr != nil {
     return postErr
   }
@@ -90,10 +106,13 @@ func (c *Client) Set(key string, value []byte) error {
   return nil
 }
 
-func MakeClient() *Client {
+// Construct Client instances.
+func MakeClient(serverUrl string) *Client {
   c := &Client {}
 
   c.httpClient = &http.Client {}
+  c.getUrl = fmt.Sprintf("%s/get", serverUrl)
+  c.setUrl = fmt.Sprintf("%s/set", serverUrl)
 
   return c
 }

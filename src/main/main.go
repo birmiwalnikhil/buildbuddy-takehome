@@ -14,14 +14,11 @@ const (
   flagEnableCaching = "--enable_caching"
 )
 
-// Entry point for the server runner.
-// HttpClients may be instantiated to interact with the Server.
 func main() {
   var fs *store.FileStore
   var cache *store.Cache
 
   var err error
-  // Configure the server via command line arguments. 
   fs, err = store.MakeFileStore("/tmp/buildbuddy")
   if err != nil {
     fmt.Println("Error making filestore; aborting.")
@@ -39,9 +36,9 @@ func main() {
   }
    
   s := server.MakeServer(fs, cache)
-  c := client.MakeClient()
+  c := client.MakeClient("http://localhost:8080")
   reader := bufio.NewReader(os.Stdin)
-  go s.Start() // This is a blocking call executed on a GoRoutine.
+  go s.Start() // Spin the server on a background thread. 
   
   // Accept user input, and convert it into either a Get or Set.
   for {
@@ -65,29 +62,32 @@ func main() {
     operation := tokens[0]
     // Require exactly two tokens, e.g. GET <key>.
     if strings.EqualFold(operation, "GET") && len(tokens) == 2 {
-      
       key := tokens[1]
-      resp := c.Get(key)
-      fmt.Println("GET", key, "->", string(resp)) 
+      resp, err := c.Get(key)
+      if err != nil {
+        fmt.Println("Error getting", key, "error:", err)
+      } else {
+        fmt.Println("GET", key, "->", string(resp)) 
+      }
    } else if strings.EqualFold(operation, "SET") && len(tokens) >= 3 {
-      // Require 3+ tokens, e.g. GET <key> <value with spaces>
+      // Require 3+ tokens, e.g. SET <key> <value with spaces>
       key := tokens[1]
       valueIdxStart := strings.Index(userInput, tokens[2])
       value := userInput[valueIdxStart:]
       
-      fmt.Println("SET", key, "->", value)
       if err := c.Set(key, []byte(value)); err != nil {
         fmt.Println("Error setting", key, "->", value, "error:", err)
-      }     
-    } else if operation == "exit" {
-      return 
+      } else {
+        fmt.Println("SET", key, "->", value)
+      }
     } else {
       fmt.Println("Invalid input:", userInput)
-
     } 
   }
 }
 
+// Return whether the flag is enabled from the command line invocation,
+// e.g. `./execute_target --enable-caching`.
 func flagEnabled(flag string, args []string) bool {
   for _, value := range args {
     if value == flag  {
