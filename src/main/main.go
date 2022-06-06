@@ -65,7 +65,7 @@ func main() {
       key := tokens[1]
       resp, err := c.Get(key)
       if err != nil {
-        fmt.Println("Error getting", key, "error:", err)
+        fmt.Println("Error getting", key, ":", err)
       } else {
         fmt.Println("GET", key, "->", string(resp)) 
       }

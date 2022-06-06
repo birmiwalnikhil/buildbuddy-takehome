@@ -43,8 +43,8 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   // Retrieve the value from the filestore.
   value, err := s.store.Get(store.Key(key))
   if err != nil {
-    // Return a StatusInternalServerError; failure retrieving the value.
-    w.WriteHeader(http.StatusInternalServerError)
+    // Return a StatusNotFoundError; failure retrieving the value.
+    w.WriteHeader(http.StatusNotFound)
     return 
   }
 
