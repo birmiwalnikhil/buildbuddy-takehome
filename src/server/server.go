@@ -54,7 +54,8 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   if s.cache != nil {
     if cacheSetErr := s.cache.Set(store.Key(key), store.Value(value)); 
         cacheSetErr != nil {
-        // Log this error to telemetry. 
+        // Log this error to telemetry.
+        fmt.Println("\tCache error:", cacheSetErr) 
     }
   }
   // Output the value back to the caller.
@@ -106,6 +107,7 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
   if s.cache != nil {  
     if err := s.cache.Set(store.Key(key), store.Value(value)); err != nil {
       // Log a caching failure to telemetry.
+      fmt.Println("\tCache Set error:", err)
     }
   }
 }
