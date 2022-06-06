@@ -70,10 +70,12 @@ func main() {
         fmt.Println("GET", key, "->", string(resp)) 
       }
    } else if strings.EqualFold(operation, "SET") && len(tokens) >= 3 {
-      // Require 3+ tokens, e.g. SET <key> <value with spaces>
+      // Require 3+ tokens, e.g. SET <key> <one space> <value with spaces>
       key := tokens[1]
-      valueIdxStart := strings.Index(userInput, tokens[2])
-      value := userInput[valueIdxStart:]
+      keyIdxStart := strings.Index(userInput, tokens[1])
+
+      // The value is one character (i.e. a space) after the end of <key>. 
+      value := userInput[keyIdxStart + len(tokens[1]) + 1:]
       
       if err := c.Set(key, []byte(value)); err != nil {
         fmt.Println("Error setting", key, "->", value, "error:", err)
