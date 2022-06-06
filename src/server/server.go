@@ -9,11 +9,10 @@ import(
   "buildbuddy.takehome.com/src/store"
 )
 
-// An HTTP Server that supports GET and SET operations. There may be multiple
-// GET operations running at the same time, but only one SET may be executed.
+// An HTTP Server that supports GET and SET operations.
 type Server struct {
   // The file store.
-  store *store.FileStore 
+  filestore *store.FileStore 
   // An optionally enabled cache.
   cache *store.Cache
 }
@@ -32,7 +31,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 
   key := keyQuery[0]
 
-  // First check the cache to see if the value is present.
+  // Check the cache to see if the value is present.
   if s.cache != nil {
     if value, err := s.cache.Get(store.Key(key)); err == nil {
       fmt.Fprintln(w, value)
@@ -41,7 +40,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   }
 
   // Retrieve the value from the filestore.
-  value, err := s.store.Get(store.Key(key))
+  value, err := s.filestore.Get(store.Key(key))
   if err != nil {
     // Return a StatusNotFoundError; failure retrieving the value.
     w.WriteHeader(http.StatusNotFound)
@@ -58,6 +57,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
         fmt.Println("\tCache error:", cacheSetErr) 
     }
   }
+
   // Output the value back to the caller.
   fmt.Fprintln(w, value)
 }
@@ -65,7 +65,6 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 // Handler for a /set call. The HTTP Body is a JSON containing a 
 // Key/Value Pair (e.g. { "key" : "a key", "value": "an arbitrary value" })
 func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
-  // Unmarshal the POST Body into the key/value pair.
   defer r.Body.Close()
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
@@ -74,6 +73,7 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
     return
   }
 
+  // Unmarshal the POST Body into the key/value pair.
   var kv map[string][]byte
   if err := json.Unmarshal(body, &kv); err != nil {
     // Return a StatusInternalServerError; error unmarshaling the POST body.
@@ -82,21 +82,15 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
   }
 
   key, ok1 := kv["key"]
-  if !ok1 {
-    // Return a StatusBadRequest; POST body missing the key.
+  value, ok2 := kv["value"]
+  if !ok1 || !ok2 {
+    // Return a StatusBadRequest; POST body missing a key/value pair.
     w.WriteHeader(http.StatusBadRequest)
     return 
   }
 
-  value, ok2 := kv["value"]
-  if !ok2 {
-    // Return a StatusBadRequest; POST body missing the value.
-    w.WriteHeader(http.StatusBadRequest)
-    return
-  }
-
   // Attempt to write the value to the filestore.
-  if err := s.store.Set(store.Key(key), store.Value(value)); err != nil {
+  if err := s.filestore.Set(store.Key(key), store.Value(value)); err != nil {
     // Failure writing to fliestore; return a 500.
     w.WriteHeader(http.StatusInternalServerError)
     return
@@ -123,10 +117,10 @@ func (s *Server) Start() {
   }
 }
 
-// Make a server, providing some configuration parameters.
+// Make a Server, providing some configuration parameters.
 func MakeServer(fs *store.FileStore, cache *store.Cache) *Server {
   server := &Server {}  
-  server.store = fs
+  server.filestore = fs
   server.cache = cache 
   return server
 }
