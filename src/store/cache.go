@@ -44,16 +44,14 @@ func (c *Cache) Set(key Key, value Value) error {
     delete(c.cache, key)
   }
 
-  // Add the key/value pair to the cache, performing LRU if needed.
+  // Do not store the value if it is too large.
   if value.SizeOfBytes() >= c.capacityBytes {
-    // We cannot store this entry in memory. Do nothing.
     return errors.New(fmt.Sprintf("Value too large; cannot store %v->%v in cache of size %v", key, value, c.capacityBytes))
   }
 
   // Continually evict LRU elements until we have sufficient space.
   for c.sizeBytes + value.SizeOfBytes() > c.capacityBytes {
-      err := c.evictLru()
-      if err != nil { 
+      if err := c.evictLru(); err != nil {
         return err
       }
   }
@@ -61,6 +59,7 @@ func (c *Cache) Set(key Key, value Value) error {
   entry := &cacheEntry{}
   entry.value = value
   entry.sizeBytes = value.SizeOfBytes()
+  // This entry is the most recently used, and should be evicted last.
   entry.evictionListElement = c.evictionList.PushBack(key)
 
   c.sizeBytes = c.sizeBytes + entry.sizeBytes
@@ -85,8 +84,12 @@ func (c *Cache) Get(key Key) (Value, error) {
   return "", errors.New(fmt.Sprintf("Cache miss for %v", key))
 }
 
-// Evict the least recently used key from the cache, returning 
-// an error in case of failure.
+/**
+ * Evict the least recently used key from the cache, returning 
+ * an error in case of failure.
+ *
+ * <p> This method assumes the mutex is held.
+ */
 func (c *Cache) evictLru() error {
   frontElement := c.evictionList.Front()
   if frontElement == nil {
@@ -104,16 +107,25 @@ func (c *Cache) evictLru() error {
   return nil
 }
 
+/**
+ * Indicate a key/value pair was just touched, e.g. to adjust it's eviction
+ * priority.
+ *
+ * <p> This method assumes the mutex is held.
+ */
 func (c *Cache) onKeyTouched(key Key) error {
   entry, ok := c.cache[key]
   if !ok {
+    // This should not happen.
     return errors.New(fmt.Sprintf("Key missing in cache %v", key))
   }
 
   if entry.evictionListElement == nil {
+    // This should not happen.
     return errors.New(fmt.Sprintf("Nil pointer in eviction list for %v", key))
   }
 
+  // This entry is most recently used; it should be evicted last.
   c.evictionList.MoveToBack(entry.evictionListElement)
   return nil
 }

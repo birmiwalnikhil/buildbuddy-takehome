@@ -25,8 +25,8 @@ const (
 type FileStore struct {
   // The absolute path where which holds permanent files.
   directory string 
-  // The temporary directory which holds temporary files. Reset on
-  // instantiation of the file store. 
+  // The temporary directory which holds temporary files. This directory 
+  // will be cleared on FileStore instantiation. 
   tempDirectory string
   // A mutex used to synchronize access to the underlying file directory.
   // A RW lock _may_ improve performance; I'm not sure what the concurrency
@@ -80,15 +80,20 @@ func (f *FileStore) Get(key Key) (Value, error) {
   return Value(value), nil
 }
 
-// Identify a file path given a Key. If isTmpFile is true, the path
-// will include the temporary directory. 
+/** 
+ * Construct a file path given a key and a parent directory.
+ */
 func (f *FileStore) getFilePath(key Key, dir string) string {
   return fmt.Sprintf(dir + "/%s", string(key))
 }
 
-// To be called on completion of writing to a temporary file, e.g.
-// to move the temporary file out of the temporary directory. Return
-// any errors, e.g. an OS failure.
+/**
+ * Clean up a temporary file, e.g. by closing the file handle and moving it to 
+ * the parent directory. Return nil if this operation was successful, or the 
+ * error that occurred.
+ *
+ * <p> This method assumes the mutex is held.
+ */
 func (f *FileStore) onTmpFileComplete(key Key, tmpFile *os.File) error {
   if err := tmpFile.Close(); err != nil {
     return err
