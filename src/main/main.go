@@ -17,7 +17,7 @@ const (
 // Entry point for the server runner.
 // HttpClients may be instantiated to interact with the Server.
 func main() {
-  var fs store.KeyValueStore
+  var fs *store.FileStore
   var cache *store.Cache
 
   var err error

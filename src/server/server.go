@@ -12,8 +12,8 @@ import(
 // An HTTP Server that supports GET and SET operations. There may be multiple
 // GET operations running at the same time, but only one SET may be executed.
 type Server struct {
-  // The key/value store.
-  store store.KeyValueStore 
+  // The file store.
+  store *store.FileStore 
   // An optionally enabled cache.
   cache *store.Cache
 }
@@ -122,7 +122,7 @@ func (s *Server) Start() {
 }
 
 // Make a server, providing some configuration parameters.
-func MakeServer(fs store.KeyValueStore, cache *store.Cache) *Server {
+func MakeServer(fs *store.FileStore, cache *store.Cache) *Server {
   server := &Server {}  
   server.store = fs
   server.cache = cache 
