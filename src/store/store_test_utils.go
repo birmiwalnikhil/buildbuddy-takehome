@@ -1,4 +1,4 @@
-package store
+  package store
 
 type KeyValuePair struct {
   Key Key
@@ -13,6 +13,8 @@ type FakeKeyValueStore struct {
   NextGet struct{Value; error}
   // An ordered list of Set calls.
   SetCalls []*KeyValuePair
+  // The result of the next Set call.
+  NextSet error
 }
 
 func (f *FakeKeyValueStore) Get(key Key) (Value, error) {
@@ -26,6 +28,9 @@ func (f *FakeKeyValueStore) SetNextGet(v Value, err error) {
 
 func (f *FakeKeyValueStore) Set(key Key, value Value) error {
   f.SetCalls = append(f.SetCalls, &KeyValuePair{ Key: key, Value: value })
-  return nil
+  return f.NextSet
 }
 
+func (f *FakeKeyValueStore) SetNextSet(e error) {
+  f.NextSet = e
+}

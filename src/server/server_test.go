@@ -1,7 +1,9 @@
 package server
 
 import (
+  "bytes"
   "errors"
+  "encoding/json"
   "fmt"
   "sync"
   "testing"
@@ -160,8 +162,84 @@ c.SetCalls[0].Value != store.Value(value) {
 }
 
 func TestSetRequiresKeyValuePair (t *testing.T) {
+  s := &Server {
+    filestore: nil,
+    cache: nil,
+    mutex: &sync.Mutex{},
+  }
+
+  w := httptest.NewRecorder()
+  req := httptest.NewRequest("POST", "http://localhost:8080/set", nil)
+  req.Header.Set("Content-Type", "application/json")
+
+  s.handleSet(w, req)
+
+  // Failure parsing the POST body.
+  if w.Result().StatusCode != http.StatusInternalServerError {
+    t.Errorf("Expected http %v, received %v", http.StatusInternalServerError, w.Result().StatusCode)
+  } 
 }
 
-func TestSetFilestoreFailureReturns500(t *testing.T) {}
+func TestSetFilestoreFailureReturns500(t *testing.T) { 
+  fs := &store.FakeKeyValueStore{}
+  s := &Server {
+    filestore: fs,
+    cache: nil,
+    mutex: &sync.Mutex{},
+  }
+  
+  fs.SetNextSet(errors.New("File store SET error."))
 
-func TestSetFilestoreSuccessSynchronziesCache(t *testing.T) {}
+  w := httptest.NewRecorder()
+  kv := make(map[string][]byte)
+  kv["key"] = []byte("a key")
+  kv["value"] = []byte("a value")
+
+  jsonKv, _ := json.Marshal(&kv)
+  req2, _ := http.NewRequest("POST", "http://localhost:8080/set", bytes.NewBuffer(jsonKv))
+
+  s.handleSet(w, req2)
+  if len(fs.SetCalls) != 1 || fs.SetCalls[0].Key != store.Key("a key") ||
+fs.SetCalls[0].Value != store.Value("a value") {
+    t.Errorf("Expected file store set call.")
+  }
+
+  if w.Result().StatusCode != http.StatusInternalServerError {
+    t.Errorf("Expected http %v, received %v", http.StatusInternalServerError,
+w.Result().StatusCode)
+  }
+}
+
+func TestSetFilestoreSuccessSynchronizesCache(t *testing.T) {
+  fs := &store.FakeKeyValueStore{}
+  cache := &store.FakeKeyValueStore{}
+  s := &Server {
+    filestore: fs,
+    cache: cache,
+    mutex: &sync.Mutex{},
+  }
+  
+  w := httptest.NewRecorder()
+  kv := make(map[string][]byte)
+  kv["key"] = []byte("a key")
+  kv["value"] = []byte("a value")
+
+  jsonKv, _ := json.Marshal(&kv)
+  req2, _ := http.NewRequest("POST", "http://localhost:8080/set", bytes.NewBuffer(jsonKv))
+
+  s.handleSet(w, req2)
+  if len(fs.SetCalls) != 1 || fs.SetCalls[0].Key != store.Key("a key") ||
+fs.SetCalls[0].Value != store.Value("a value") {
+    t.Errorf("Expected file store set call.")
+  }
+
+  if len(cache.SetCalls) != 1 || cache.SetCalls[0].Key != store.Key("a key") ||
+cache.SetCalls[0].Value != store.Value("a value") {
+    t.Errorf("Expected cache set call.")
+  }
+
+  if w.Result().StatusCode != http.StatusOK {
+    t.Errorf("Expected http %v, received %v", http.StatusOK,
+w.Result().StatusCode)
+  }
+}
