@@ -23,6 +23,11 @@ type Client struct {
     httpClient *http.Client
 }
 
+type KeyValuePair struct {
+  Key string
+  Value string
+}
+
 /** 
  * Invoke a /get request for a specified `key` on the API server. Returns the 
  * stored value, if any, or any errors (e.g. a network connection failure, an 
@@ -81,11 +86,11 @@ func (c *Client) Set(key string, value []byte) error {
   }
 
   // Marshal the key/value pair into a JSON.
-  kv := map[string][]byte {
-    "key": []byte(key),
-    "value": value,
+  kv := &KeyValuePair {
+    Key: key,
+    Value: string(value),
   }
-  
+ 
   jsonKv, err := json.Marshal(kv)
   if err != nil {
     return err

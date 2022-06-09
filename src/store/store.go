@@ -12,6 +12,11 @@ func (v Value) SizeOfBytes() int {
   return len(v)
 }
 
+type KeyValuePair struct {
+  Key Key
+  Value Value
+}
+
 // An interface for a KeyValue store.
 type KeyValueStore interface {
   /**

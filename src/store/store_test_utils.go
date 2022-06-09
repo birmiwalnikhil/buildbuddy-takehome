@@ -1,9 +1,4 @@
-  package store
-
-type KeyValuePair struct {
-  Key Key
-  Value Value
-}
+package store
 
 // A collection of testing utilities for the KeyValueStore.
 type FakeKeyValueStore struct {

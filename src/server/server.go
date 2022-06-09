@@ -49,6 +49,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
   // Retrieve the value from the filestore.
   value, err := s.filestore.Get(store.Key(key))
   if err != nil {
+    fmt.Println("GET 404:", store.Key(key), "error:", err)
     // Return a StatusNotFoundError; failure retrieving the value.
     w.WriteHeader(http.StatusNotFound)
     return 
@@ -79,28 +80,23 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
     // Return a StatusInternalServerError; error reading the POST body.
+    fmt.Println("Error reading POST body:", err)
     w.WriteHeader(http.StatusInternalServerError)
     return
   }
 
   // Unmarshal the POST Body into the key/value pair.
-  var kv map[string][]byte
+  var kv store.KeyValuePair
   if err := json.Unmarshal(body, &kv); err != nil {
     // Return a StatusInternalServerError; error unmarshaling the POST body.
+    fmt.Printf("Error unmarshaling JSON %s, error: %v", body, err)
     w.WriteHeader(http.StatusInternalServerError)
     return
   }
 
-  key, ok1 := kv["key"]
-  value, ok2 := kv["value"]
-  if !ok1 || !ok2 {
-    // Return a StatusBadRequest; POST body missing a key/value pair.
-    w.WriteHeader(http.StatusBadRequest)
-    return 
-  }
-
   // Attempt to write the value to the filestore.
-  if err := s.filestore.Set(store.Key(key), store.Value(value)); err != nil {
+  if err := s.filestore.Set(kv.Key, kv.Value); err != nil {
+    fmt.Println("Error setting in the filestore:", err)
     // Failure writing to fliestore; return a 500.
     w.WriteHeader(http.StatusInternalServerError)
     return
@@ -109,7 +105,7 @@ func (s *Server) handleSet(w http.ResponseWriter, r *http.Request) {
   // Maintain consistency between the cache and the filestore.
   // Any errors thrown here are non-fatal; they should be logged to telemetry.
   if s.cache != nil {  
-    if err := s.cache.Set(store.Key(key), store.Value(value)); err != nil {
+    if err := s.cache.Set(kv.Key, kv.Value); err != nil {
       // Log a caching failure to telemetry.
       fmt.Println("\tCache Set error:", err)
     }
